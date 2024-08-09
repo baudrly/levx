@@ -1,11 +1,7 @@
 CXX = g++
-CXXFLAGS = -std=c++11 -O3 -fopenmp
-LDFLAGS = -lhdf5_cpp -lhdf5
+CXXFLAGS = -std=c++11 -O3 -fopenmp -march=native -I/usr/include/eigen3/
+LDFLAGS = -L/usr/lib/x86_64-linux-gnu/hdf5
 
-# Eigen library include path (adjust if different)
-EIGEN_INC = /usr/include/eigen3
-
-# Source and target
 SRC = your_program.cpp
 TARGET = your_program
 
