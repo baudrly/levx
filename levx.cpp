@@ -2,8 +2,12 @@
 #include <fstream>
 #include <vector>
 #include <string>
-#include <Eigen/Sparse>
 #include <omp.h>
+#include <algorithm>
+#include <Eigen/Sparse>
+
+// Using Eigen::SparseMatrix
+// using SparseMatrix = Eigen::SparseMatrix<int>;
 
 enum Resolution { RES_10BP, RES_100BP, RES_1KB };
 
@@ -13,6 +17,7 @@ Resolution decide_resolution(size_t distance) {
     return RES_1KB;
 }
 
+// using only two rows
 int levenshtein_distance_optimized(const std::string &s1, const std::string &s2) {
     size_t len1 = s1.size(), len2 = s2.size();
     if (len1 > len2) {
@@ -28,7 +33,7 @@ int levenshtein_distance_optimized(const std::string &s1, const std::string &s2)
         current[0] = j;
         for (size_t i = 1; i <= len1; i++) {
             int cost = (s1[i - 1] == s2[j - 1]) ? 0 : 1;
-            current[i] = std::min({ previous[i] + 1, current[i - 1] + 1, previous[i - 1] + cost });
+            current[i] = std::min({previous[i] + 1, current[i - 1] + 1, previous[i - 1] + cost});
         }
         std::swap(current, previous);
     }
@@ -44,12 +49,7 @@ std::string load_genome_from_fasta(const std::string &filename) {
     }
 
     std::string line, genome_sequence;
-    std::getline(file, line);
-    if (line.empty() || line[0] != '>') {
-        std::cerr << "Invalid FASTA file format." << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
+    std::getline(file, line); // Skip header line
     while (std::getline(file, line)) {
         genome_sequence += line;
     }
@@ -57,17 +57,27 @@ std::string load_genome_from_fasta(const std::string &filename) {
     return genome_sequence;
 }
 
-void save_to_csv(const Eigen::SparseMatrix<int>& matrix, const std::string& filename) {
-    std::ofstream out_file(filename);
+//void save_chunk_to_csv(const SparseMatrix& matrix, const std::string& filename, size_t start, size_t end) {
+//    std::ofstream out_file(filename);
+//    if (!out_file.is_open()) {
+//        throw std::runtime_error("Unable to open file for writing");
+//    }
+//
+//    // iterate over nonzero elements of the sparse matrix within chunk
+//    for (int k = start; k < end; ++k) {
+//        for (SparseMatrix::InnerIterator it(matrix, k); it; ++it) {
+//            if (it.row() >= start && it.row() < end) { // Only save elements within the chunk
+//                out_file << it.row() << "," << it.col() << "," << it.value() << "\n";
+//            }
+//        }
+//    }
+//}
+void save_result(size_t i, size_t j, int distance, const std::string& filename) {
+    std::ofstream out_file(filename, std::ios::app); // Append to the file
     if (!out_file.is_open()) {
         throw std::runtime_error("Unable to open file for writing");
     }
-
-    for (int k = 0; k < matrix.outerSize(); ++k) {
-        for (Eigen::SparseMatrix<int>::InnerIterator it(matrix, k); it; ++it) {
-            out_file << it.row() << "," << it.col() << "," << it.value() << "\n";
-        }
-    }
+    out_file << i << "," << j << "," << distance << "\n";
 }
 
 int main(int argc, char* argv[]) {
@@ -76,33 +86,51 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    omp_set_num_threads(omp_get_max_threads());
+    int max_threads = omp_get_max_threads();
+    omp_set_num_threads(max_threads);
+
     std::string chromosome_data = load_genome_from_fasta(argv[1]);
+    size_t data_size = chromosome_data.size();
 
-    Eigen::SparseMatrix<int> matrix(chromosome_data.size(), chromosome_data.size());
+    size_t chunk_size = 10000; // genome chunks
+    const size_t min_chunk_size = 1000;
 
-    #pragma omp parallel for schedule(dynamic)
-    for (size_t i = 0; i < chromosome_data.size(); i++) {
-        for (size_t j = i; j < chromosome_data.size(); j++) {
-            Resolution resolution = decide_resolution(j - i);
-            int segment_size = (resolution == RES_10BP) ? 10 : (resolution == RES_100BP) ? 100 : 1000;
+    // Process the genome in chunks
+    for (size_t start = 0; start < data_size; start += chunk_size) {
+        size_t end = std::min(start + chunk_size, data_size);
 
-            if (i + segment_size > chromosome_data.size() || j + segment_size > chromosome_data.size()) {
-                continue;
-            }
+        #pragma omp parallel for schedule(dynamic)
+        for (size_t i = start; i < end; i++) {
+            for (size_t j = i; j < data_size; j++) { 
+                Resolution resolution = decide_resolution(j - i);
+                int segment_size = (resolution == RES_10BP) ? 10 : (resolution == RES_100BP) ? 100 : 1000;
 
-            std::string segment1 = chromosome_data.substr(i, segment_size);
-            std::string segment2 = chromosome_data.substr(j, segment_size);
-            int distance = levenshtein_distance_optimized(segment1, segment2);
+                // Avoid out-of-bounds access
+                if (i + segment_size > data_size || j + segment_size > data_size) {
+                    continue;
+                }
 
-            matrix.coeffRef(i, j) = distance;
-            if (i != j) {
-                matrix.coeffRef(j, i) = distance;
+                std::string segment1 = chromosome_data.substr(i, segment_size);
+                std::string segment2 = chromosome_data.substr(j, segment_size);
+                int distance = levenshtein_distance_optimized(segment1, segment2);
+
+                // result directly to output
+                save_result(i, j, distance, argv[2]);
             }
         }
+
+        // Dynamic Chunk Size Adjustment (Optional - uncomment if needed)
+        // // Monitor memory usage within the chunk
+        // // ... (Implementation depends on your system/OS)
+
+        // // Adjust chunk size based on memory usage
+        // if (/* memory usage is high */) {
+        //     chunk_size = std::max(chunk_size / 2, min_chunk_size);
+        // } else if (/* memory usage is low */) {
+        //     chunk_size = std::min(chunk_size * 2, data_size - start);
+        // }
     }
 
-    save_to_csv(matrix, argv[2]);
-    std::cout << "Processing complete. Data saved to: " << argv[2] << "\n";
+    std::cout << "Processing complete. Results saved to: " << argv[2] << "\n";
     return 0;
 }
