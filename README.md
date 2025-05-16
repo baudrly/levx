@@ -9,4 +9,7 @@ Resolution is as follows:
 This can be changed in the source before building.
 
 Build: `cargo build --release`
+
 Usage: `./chromosome_distance_calculator <fasta_file> <output_ipc_file>`
+
+The output is in the Arrow IPC format.
