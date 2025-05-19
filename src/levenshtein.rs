@@ -31,6 +31,7 @@ pub fn levenshtein_distance(s1: &[u8], s2: &[u8]) -> u16 {
     previous_row[len1]
 }
 
+
 #[cfg(test)]
 mod tests {
     use super::*;

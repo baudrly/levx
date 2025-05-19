@@ -5,10 +5,8 @@ edition = "2021"
 
 [dependencies]
 polars = { version = "0.40.0", features = ["ipc", "lazy", "dtype-u8", "dtype-u16"] }
-arrow = { version = "55.1.0", features = ["ipc"] } # This seems to correctly pull in arrow-array, arrow-ipc etc. for v55.1.0
+arrow = { version = "55.1.0", features = ["ipc"] } 
 rayon = "1.10.0"
-crossbeam-channel = "0.5.13"
+crossbeam-channel = "0.5.13" # Ensure this is a recent enough version, 0.5.13 should be fine.
 num_cpus = "1.16.0"
 flate2 = "1.0.30"
-
-# Ensure any [patch.crates-io] for arrow-arith is removed from here.
