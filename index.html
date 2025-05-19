@@ -3,265 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Levenshtein distance matrix calculator and viewer</title>
+    <title>Chromosome Distance Matrix</title> <!-- Changed title -->
     <script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
-    <style>
-        /* ... (Same "slick" CSS from your previous working example) ... */
-        :root {
-            --primary-color: #007bff; /* A nice blue */
-            --secondary-color: #6c757d; /* Grey */
-            --light-color: #f8f9fa; /* Very light grey / off-white */
-            --dark-color: #343a40; /* Dark grey */
-            --success-color: #28a745; /* Green */
-            --danger-color: #dc3545; /* Red */
-            --warning-color: #ffc107; /* Yellow */
-            --info-color: #17a2b8; /* Teal */
-            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            --border-radius: 8px;
-            --box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-        }
-
-        body {
-            font-family: var(--font-family);
-            margin: 0;
-            padding: 0;
-            background-color: #eef1f5; /* Slightly off-white background for the page */
-            color: var(--dark-color);
-            line-height: 1.6;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            font-size: 16px;
-        }
-
-        .container-fluid { /* Full width container for header/footer */
-             width: 100%;
-        }
-
-        .container { /* Centered content container */
-            width: 90%;
-            max-width: 1400px; /* Increased max-width */
-            margin: 2rem auto;
-            padding: 2rem;
-            background-color: #fff;
-            box-shadow: var(--box-shadow);
-            border-radius: var(--border-radius);
-        }
-        
-        header {
-            background: linear-gradient(90deg, var(--primary-color) 0%, #0056b3 100%);
-            color: white;
-            padding: 2rem 0;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        header h1 {
-            margin: 0;
-            font-size: 2.8rem;
-            font-weight: 300;
-            letter-spacing: 1px;
-        }
-        
-        footer {
-            text-align: center;
-            padding: 1.5rem;
-            background-color: var(--dark-color);
-            color: var(--light-color);
-            margin-top: auto; /* Pushes footer to bottom */
-        }
-        footer p { margin: 0; }
-
-        .control-section, .status-section, .plot-section, .action-section {
-            margin-bottom: 2.5rem;
-            padding: 2rem;
-            border: 1px solid #dee2e6;
-            border-radius: var(--border-radius);
-            background-color: #fff;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-        
-        .control-section h2, .status-section h2, .plot-section h2, .action-section h2 {
-            margin-top: 0;
-            color: var(--primary-color);
-            border-bottom: 3px solid var(--primary-color);
-            padding-bottom: 0.75rem;
-            margin-bottom: 1.5rem;
-            font-size: 1.8rem;
-            font-weight: 400;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            color: #495057;
-        }
-
-        input[type="file"], input[type="text"], select, input[type="number"] {
-            width: 100%;
-            padding: 0.85rem 1rem;
-            margin-bottom: 1.25rem;
-            border: 1px solid #ced4da;
-            border-radius: var(--border-radius);
-            box-sizing: border-box;
-            font-size: 1rem;
-            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-        }
-        input[type="file"] {
-            padding: 0.6rem 1rem; 
-         }
-        input:focus, select:focus {
-            border-color: var(--primary-color);
-            outline: 0;
-            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
-        }
-
-        .action-buttons button {
-            margin-right: 1rem;
-            margin-bottom: 0.5rem; /* For wrapping */
-        }
-        
-        button { 
-            color: white;
-            padding: 0.85rem 1.75rem;
-            border: none;
-            border-radius: var(--border-radius);
-            cursor: pointer;
-            font-size: 1.05rem; /* Slightly increased */
-            font-weight: 500;
-            transition: background-color 0.2s ease, transform 0.1s ease;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        button:hover {
-            transform: translateY(-1px);
-        }
-        button:active {
-            transform: translateY(0px);
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        }
-        button:disabled {
-            background-color: var(--secondary-color) !important; /* Ensure disabled style overrides */
-            cursor: not-allowed;
-            transform: translateY(0px);
-            box-shadow: none;
-        }
-        
-        #visualizeButton { background-color: var(--success-color); }
-        #visualizeButton:hover { background-color: #1e7e34; }
-        #downloadIpcButton { background-color: var(--info-color); }
-        #downloadIpcButton:hover { background-color: #10707f; }
-
-
-        #status {
-            min-height: 120px;
-            max-height: 350px;
-            overflow-y: auto;
-            background-color: var(--dark-color);
-            color: var(--light-color);
-            padding: 1rem;
-            border-radius: var(--border-radius);
-            white-space: pre-wrap;
-            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
-            font-size: 0.9rem;
-            border: 1px solid #454d55;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
-        }
-
-        #plotContainer {
-            width: 100%;
-            min-height: 550px; 
-            border: 1px solid #dee2e6;
-            border-radius: var(--border-radius);
-            background-color: #fdfdfd; 
-        }
-        
-        .plot-controls {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
-            gap: 1.5rem; 
-            margin-bottom: 1.5rem;
-            padding: 1rem;
-            background-color: #f8f9fa;
-            border-radius: var(--border-radius);
-            border: 1px solid #e9ecef;
-        }
-        .plot-controls > div { 
-            display: flex;
-            flex-direction: column;
-        }
-        .plot-controls label {
-            font-weight: 500;
-            margin-bottom: 0.35rem;
-            font-size: 0.95rem;
-        }
-        .plot-controls select, .plot-controls input[type="number"] {
-            width: 100%; 
-            margin-bottom: 0;
-        }
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            margin-top: 0.5rem; 
-        }
-        .checkbox-group input[type="checkbox"] {
-            width: auto;
-            margin-right: 0.5rem;
-            transform: scale(1.2); 
-        }
-        .checkbox-group label { 
-            font-weight: normal;
-            margin-bottom: 0;
-        }
-
-
-        .spinner-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 1rem;
-        }
-        .spinner {
-            border: 6px solid #e0e0e0; 
-            border-top: 6px solid var(--primary-color); 
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 0.8s linear infinite;
-        }
-        .hidden { display: none !important; }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .container {
-                width: 95%;
-                padding: 1rem;
-            }
-            header h1 {
-                font-size: 2rem;
-            }
-            .control-section h2, .status-section h2, .plot-section h2, .action-section h2 {
-                font-size: 1.5rem;
-            }
-            button {
-                font-size: 1rem;
-                padding: 0.75rem 1.25rem;
-            }
-            .plot-controls {
-                grid-template-columns: 1fr; 
-            }
-            .action-buttons button {
-                width: 100%;
-                margin-right: 0;
-                margin-bottom: 0.5rem;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header class="container-fluid">
@@ -269,36 +13,84 @@
     </header>
 
     <main class="container">
-        <section class="control-section">
-            <h2>Input File</h2>
-            <label for="fastaFile">Select FASTA File (.fa, .fasta, .fa.gz, .fasta.gz):</label>
-            <input type="file" id="fastaFile" accept=".fa,.fasta,.fa.gz,.fasta.gz">
-        </section>
-
-        <section class="action-section">
-            <h2>Actions</h2>
-            <div class="action-buttons">
-                <button id="visualizeButton">Visualize Distances (Plot)</button>
-                <button id="downloadIpcButton">Download Full Data (Arrow IPC)</button>
+        <section class="section input-methods-section">
+            <h2>Input FASTA Data</h2>
+            <div class="tabs">
+                <button class="tab-button active" data-tab="fileTab">Upload File</button>
+                <button class="tab-button" data-tab="urlTab">Fetch from URL</button>
+                <button class="tab-button" data-tab="pasteTab">Paste Text</button>
+                <button class="tab-button" data-tab="exampleTab">Use Example</button>
             </div>
-            <label for="ipcFileName">IPC Filename (for download):</label>
-            <input type="text" id="ipcFileName" value="distances.ipc">
+
+            <div id="fileTab" class="tab-content active">
+                <div class="input-group">
+                    <label for="fastaFile">Select FASTA File (.fa, .fasta, .fa.gz, .fasta.gz):</label>
+                    <input type="file" id="fastaFile" accept=".fa,.fasta,.fa.gz,.fasta.gz">
+                </div>
+            </div>
+            <div id="urlTab" class="tab-content">
+                <div class="input-group">
+                    <label for="fastaUrl">Enter FASTA File URL (plain or .gz):</label>
+                    <input type="url" id="fastaUrl" placeholder="https://example.com/sequence.fasta.gz">
+                </div>
+                <button id="fetchUrlButton" class="input-action-button">Fetch and Stage Data</button>
+            </div>
+            <div id="pasteTab" class="tab-content">
+                <div class="input-group">
+                    <label for="fastaTextArea">Paste FASTA content here:</label>
+                    <textarea id="fastaTextArea" rows="10" placeholder=">Seq1_header
+ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT
+>Seq2_another_header
+CGTACGTACGTACGTACGTACGTACGTACGTACGTACGAT"></textarea>
+                </div>
+                 <div class="checkbox-group input-group">
+                    <input type="checkbox" id="pasteIsGzipped" disabled> 
+                    <label for="pasteIsGzipped">Pasted content is Gzipped (advanced)</label>
+                </div>
+                <button id="pasteButton" class="input-action-button">Stage Pasted Text</button>
+            </div>
+            <div id="exampleTab" class="tab-content">
+                <div class="input-group">
+                    <label for="exampleSelect">Choose an example:</label>
+                    <select id="exampleSelect">
+                        <option value="small_distinct">Small Distinct (2 seqs, ~30bp)</option>
+                        <option value="medium_similar">Medium Similar (3 seqs, ~60bp)</option>
+                    </select>
+                </div>
+                <button id="loadExampleButton" class="input-action-button">Load Example & Visualize</button>
+            </div>
         </section>
 
-        <section class="plot-section hidden" id="plotArea">
+        <section class="section action-section">
+            <h2>Actions on Staged Data</h2>
+            <p><em>Data must be staged via one of the methods above before these actions are available.</em></p>
+            <div class="button-group">
+                <button id="visualizeButton" disabled>Visualize Staged Data (Plot)</button>
+                <button id="downloadIpcButton" disabled>Download Full Data (Arrow IPC)</button>
+            </div>
+            <div class="input-group">
+                <label for="ipcFileName">IPC Filename (for download):</label>
+                <input type="text" id="ipcFileName" value="distances.ipc">
+            </div>
+        </section>
+
+        <section class="section plot-section hidden" id="plotArea">
             <h2>Distance Matrix Visualization</h2>
-            <label for="chromosomeSelect">Select Chromosome to Visualize:</label>
-            <select id="chromosomeSelect" disabled></select>
+            <div class="input-group">
+                <label for="chromosomeSelect">Select Chromosome to Visualize:</label>
+                <select id="chromosomeSelect" disabled></select>
+            </div>
             
             <div class="plot-controls">
                 <div>
                     <label for="colorscaleSelect">Color Scale:</label>
                     <select id="colorscaleSelect">
-                        <option value="Viridis">Viridis</option> <option value="Plasma">Plasma</option>
                         <option value="Blues" selected>Blues</option> <option value="Greys">Greys</option>
+                        <option value="Viridis">Viridis</option> <option value="Plasma">Plasma</option>
                         <option value="YlGnBu">YlGnBu</option> <option value="RdBu">Red-Blue</option>
                         <option value="Jet">Jet</option> <option value="Hot">Hot</option>
                         <option value="Electric">Electric</option> <option value="Earth">Earth</option>
+                        <option value="Greens">Greens</option><option value="Reds">Reds</option>
                     </select>
                 </div>
                 <div class="checkbox-group">
@@ -317,16 +109,32 @@
                     <label for="zmaxInput">Max Distance (zmax):</label>
                     <input type="number" id="zmaxInput" placeholder="auto" step="any">
                 </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="transposeMatrix">
+                    <label for="transposeMatrix">Transpose Matrix (Swap X/Y)</label>
+                </div>
+                <div>
+                    <label for="cellGapRange">Cell Gap: <span id="cellGapValue">0.5</span></label>
+                    <input type="range" id="cellGapRange" min="0" max="5" step="0.1" value="0.5">
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="showTextOnCells">
+                    <label for="showTextOnCells">Show Text on Cells (Slow for large plots)</label>
+                </div>
+                 <div class="checkbox-group">
+                    <input type="checkbox" id="fixedAspectRatio" checked>
+                    <label for="fixedAspectRatio">Fixed Aspect Ratio (Square Cells)</label>
+                </div>
             </div>
             <div id="plotContainer">Plot will appear here after processing. Select a chromosome.</div>
         </section>
 
-        <section class="status-section">
+        <section class="section status-section">
             <h2>Processing Log</h2>
             <div id="spinnerContainer" class="spinner-container hidden">
                  <div class="spinner"></div>
             </div>
-            <div id="status">Select a FASTA file and an action...</div>
+            <div id="status">Select a FASTA input method or file...</div>
         </section>
     </main>
     
@@ -339,174 +147,241 @@
 
         let wasmInitialized = false;
         let transformedPlotDataCache = null; 
+        let currentFastaBytes = null; 
+        let currentIsGzipped = false;
         
-        async function initializeWasm() { 
-            if (wasmInitialized) return;
-            try {
-                logStatus("Initializing Rust Wasm module...");
-                await init(); 
-                wasmInitialized = true;
-                logStatus("Rust Wasm module initialized successfully.");
-            } catch (e) {
-                logStatus(`Error initializing Wasm: ${e.message || e}`);
-                console.error("Wasm Init Error:", e);
-                alert("Failed to initialize WebAssembly module. Check console for details.");
-            }
-        }
+        // DOM Element Selection
+        let fastaFileInput, fastaUrlInput, fetchUrlButton, fastaTextArea, pasteIsGzippedCheckbox, pasteButton,
+            exampleSelect, loadExampleButton, visualizeButton, downloadIpcButton, ipcFileNameInput,
+            statusDiv, spinnerContainer, plotArea, plotContainer, chromosomeSelect,
+            colorscaleSelect, showColorbarCheckbox, reverseColorscaleCheckbox, zminInput, zmaxInput,
+            transposeMatrixCheckbox, cellGapRange, cellGapValueSpan, showTextOnCellsCheckbox, fixedAspectRatioCheckbox; // New plot controls
 
-        const fastaFileInput = document.getElementById('fastaFile');
-        const visualizeButton = document.getElementById('visualizeButton');
-        const downloadIpcButton = document.getElementById('downloadIpcButton');
-        const ipcFileNameInput = document.getElementById('ipcFileName');
-        const statusDiv = document.getElementById('status');
-        const spinnerContainer = document.getElementById('spinnerContainer');
-        const plotArea = document.getElementById('plotArea');
-        const plotContainer = document.getElementById('plotContainer');
-        const chromosomeSelect = document.getElementById('chromosomeSelect');
-        const colorscaleSelect = document.getElementById('colorscaleSelect');
-        const showColorbarCheckbox = document.getElementById('showColorbar');
-        const reverseColorscaleCheckbox = document.getElementById('reverseColorscale');
-        const zminInput = document.getElementById('zminInput');
-        const zmaxInput = document.getElementById('zmaxInput');
-        
         const GRID_SPACING_JS = 1000; 
 
-        function logStatus(message) { 
+        function initializeDOMReferences() {
+            fastaFileInput = document.getElementById('fastaFile');
+            fastaUrlInput = document.getElementById('fastaUrl');
+            fetchUrlButton = document.getElementById('fetchUrlButton');
+            fastaTextArea = document.getElementById('fastaTextArea');
+            pasteIsGzippedCheckbox = document.getElementById('pasteIsGzipped');
+            pasteButton = document.getElementById('pasteButton');
+            exampleSelect = document.getElementById('exampleSelect');
+            loadExampleButton = document.getElementById('loadExampleButton');
+            visualizeButton = document.getElementById('visualizeButton');
+            downloadIpcButton = document.getElementById('downloadIpcButton');
+            ipcFileNameInput = document.getElementById('ipcFileName');
+            statusDiv = document.getElementById('status');
+            spinnerContainer = document.getElementById('spinnerContainer');
+            plotArea = document.getElementById('plotArea');
+            plotContainer = document.getElementById('plotContainer');
+            chromosomeSelect = document.getElementById('chromosomeSelect');
+            colorscaleSelect = document.getElementById('colorscaleSelect');
+            showColorbarCheckbox = document.getElementById('showColorbar'); 
+            reverseColorscaleCheckbox = document.getElementById('reverseColorscale'); 
+            zminInput = document.getElementById('zminInput'); 
+            zmaxInput = document.getElementById('zmaxInput'); 
+            transposeMatrixCheckbox = document.getElementById('transposeMatrix');
+            cellGapRange = document.getElementById('cellGapRange');
+            cellGapValueSpan = document.getElementById('cellGapValue');
+            showTextOnCellsCheckbox = document.getElementById('showTextOnCells');
+            fixedAspectRatioCheckbox = document.getElementById('fixedAspectRatio');
+        }
+        
+        // Utility Functions
+        function logStatus(message) { /* ... same ... */ 
             console.log(message); 
             const timestamp = new Date().toLocaleTimeString();
             statusDiv.innerHTML += `[${timestamp}] ${message}\n`;
             statusDiv.scrollTop = statusDiv.scrollHeight; 
         }
-        
         const rustProgressCallback = (message) => { logStatus(String(message)); };
 
-        function transformJsonToHeatmapCache(jsonDataArray) {
-            logStatus("Transforming JSON data for plotting...");
-            const cache = {};
-            if (!jsonDataArray || !Array.isArray(jsonDataArray)) {
-                logStatus("Error: Wasm did not return a valid array of chromosome data for JSON.");
-                return null;
+        async function initializeWasm() { /* ... same ... */ 
+            if (wasmInitialized) return true;
+            try {
+                logStatus("Initializing Rust Wasm module..."); await init(); wasmInitialized = true;
+                logStatus("Rust Wasm module initialized successfully."); return true;
+            } catch (e) {
+                logStatus(`Error initializing Wasm: ${e.message || e}`); console.error("Wasm Init Error:", e);
+                alert("Failed to initialize WebAssembly module. Check console for details."); return false;
             }
+        }
 
+        function updateActionButtonsState() { /* ... same ... */
+            const dataReady = currentFastaBytes && currentFastaBytes.length > 0;
+            if(visualizeButton) visualizeButton.disabled = !dataReady;
+            if(downloadIpcButton) downloadIpcButton.disabled = !dataReady;
+        }
+
+        function setUIDisabledState(disabled) { /* ... same ... */
+            if(fastaFileInput) fastaFileInput.disabled = disabled;
+            if(fastaUrlInput) fastaUrlInput.disabled = disabled;
+            if(fetchUrlButton) fetchUrlButton.disabled = disabled;
+            if(fastaTextArea) fastaTextArea.disabled = disabled;
+            if(pasteButton) pasteButton.disabled = disabled;
+            if(exampleSelect) exampleSelect.disabled = disabled;
+            if(loadExampleButton) loadExampleButton.disabled = disabled;
+            if (disabled) { if(visualizeButton) visualizeButton.disabled = true; if(downloadIpcButton) downloadIpcButton.disabled = true; } 
+            else { updateActionButtonsState(); }
+        }
+
+        // Data Loading Logic
+        async function stageFastaFromFile(file) { /* ... same ... */
+            if (!file) return; logStatus(`Staging file: ${file.name}`); currentIsGzipped = file.name.endsWith('.gz');
+            try {
+                const arrayBuffer = await file.arrayBuffer(); currentFastaBytes = new Uint8Array(arrayBuffer);
+                logStatus(`File "${file.name}" staged (${(currentFastaBytes.length/1024).toFixed(2)} KB).`); updateActionButtonsState();
+            } catch (e) { logStatus(`Error reading file: ${e.message || e}`); currentFastaBytes = null; updateActionButtonsState(); }
+        }
+        async function stageFastaFromUrl() { /* ... same ... */
+            const url = fastaUrlInput.value.trim(); if (!url) { logStatus("Please enter a URL."); return; }
+            logStatus(`Fetching FASTA from URL: ${url}`); spinnerContainer.classList.remove('hidden'); setUIDisabledState(true);
+            try {
+                const response = await fetch(url); if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const arrayBuffer = await response.arrayBuffer(); currentFastaBytes = new Uint8Array(arrayBuffer);
+                currentIsGzipped = url.endsWith('.gz');
+                logStatus(`FASTA from URL staged (${(currentFastaBytes.length/1024).toFixed(2)} KB).`); updateActionButtonsState();
+            } catch (e) { logStatus(`Error fetching from URL: ${e.message || e}`); currentFastaBytes = null; updateActionButtonsState(); }
+            finally { spinnerContainer.classList.add('hidden'); setUIDisabledState(false); }
+        }
+        function stageFastaFromText() { /* ... same ... */
+            const text = fastaTextArea.value; if (!text.trim()) { logStatus("Text area is empty."); return; }
+            logStatus("Staging FASTA from pasted text..."); currentIsGzipped = pasteIsGzippedCheckbox.checked;
+            if (currentIsGzipped) { logStatus("Warning: Gzipped pasted content unsupported. Treating as plain text."); currentIsGzipped = false; pasteIsGzippedCheckbox.checked = false; }
+            const encoder = new TextEncoder(); currentFastaBytes = encoder.encode(text);
+            logStatus(`Pasted text staged as FASTA (${(currentFastaBytes.length/1024).toFixed(2)} KB).`); updateActionButtonsState();
+        }
+        
+        // --- Updated Example Data ---
+        const exampleFastaData = {
+            small_distinct: {
+                name: "Small Distinct (2 seqs, ~30bp)", gzipped: false,
+                content: `>SeqA_example_small_distinct
+ACGTACGTACGTACGTACGTACGTACGTNN
+>SeqB_example_small_distinct
+TTTTCCCCAAAAGGGGTTTTCCCCAAAAGN`
+            },
+            medium_similar: {
+                name: "Medium Similar (3 seqs, ~60bp)", gzipped: false,
+                content: `>ChrOne_medium_similar_example_sequence_id_with_more_details
+ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTNNNN
+ACGTACGTACGTACGTACGTACGT
+>ChrTwo_medium_similar_example_with_slight_variation_sequence
+ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGGNNNN
+ACGTACGTACGTACGTACGTACGT
+>ChrThree_medium_similar_another_variation_of_sequence
+ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTNNNN
+AGGTACGTACGTACGTACGTACGA`
+            }
+        };
+        async function stageAndProcessExample() { // Modified to call handleProcessingRequest
+            const exampleKey = exampleSelect.value; const example = exampleFastaData[exampleKey]; if (!example) return;
+            logStatus(`Loading example: "${example.name}"`); const encoder = new TextEncoder();
+            currentFastaBytes = encoder.encode(example.content); currentIsGzipped = example.gzipped;
+            logStatus(`Example "${example.name}" loaded and staged.`);
+            updateActionButtonsState();
+            await handleProcessingRequest(true); // Automatically trigger visualization
+        }
+
+        // --- Plotting Logic ---
+        function transformJsonToHeatmapCache(jsonDataArray) { /* ... same as before ... */
+            logStatus("Transforming JSON data for plotting..."); const cache = {};
+            if (!jsonDataArray || !Array.isArray(jsonDataArray)) { logStatus("Error: Wasm did not return valid JSON array."); return null; }
             jsonDataArray.forEach(chromData => {
-                if (!chromData || !chromData.name || !chromData.points || typeof chromData.max_idx === 'undefined') {
-                    logStatus(`Warning: Skipping malformed chromosome data object: ${JSON.stringify(chromData)}`); return;
-                }
-                // Plotly heatmap z needs to be an array of arrays (rows)
-                // x and y define the coordinates of the cells.
-                // If max_idx is the largest index, the matrix size is max_idx + 1
+                if (!chromData || !chromData.name || !chromData.points || typeof chromData.max_idx === 'undefined') { logStatus(`Warning: Skipping malformed chromData.`); return; }
                 const matrixSize = chromData.max_idx + 1;
-                
-                // Create x and y labels (0 to max_idx) - these are the grid point indices
-                // For Plotly, x and y can be the coordinates for the center of the cells,
-                // or if z is a 2D array, x and y can be arrays of values for the axes.
                 const xyIndices = Array.from({length: matrixSize}, (_, i) => i); 
-
-                // Initialize z matrix with NaNs for Plotly to handle gaps
                 const zMatrix = Array(matrixSize).fill(null).map(() => Array(matrixSize).fill(NaN));
-                
-                let minDistance = Infinity;
-                let maxDistance = -Infinity;
-
                 chromData.points.forEach(p => {
-                    // Ensure indices are within bounds (should be, as max_idx is derived from them)
-                    if (p.x < matrixSize && p.y < matrixSize) {
-                        zMatrix[p.y][p.x] = p.d; // Plotly z is typically [row][col] so [y-idx][x-idx]
-                        zMatrix[p.x][p.y] = p.d; // Symmetric matrix
-                        if (p.d < minDistance) minDistance = p.d;
-                        if (p.d > maxDistance) maxDistance = p.d;
-                    } else {
-                        console.warn(`Point out of bounds: x=${p.x}, y=${p.y}, max_idx=${chromData.max_idx}`);
-                    }
+                    if (p.x < matrixSize && p.y < matrixSize) { zMatrix[p.y][p.x] = p.d; zMatrix[p.x][p.y] = p.d; }
                 });
-                
-                // For debugging:
-                // console.log(`Chrom: ${chromData.name}, Matrix Size: ${matrixSize}, MinDist: ${minDistance}, MaxDist: ${maxDistance}`);
-                // if (matrixSize < 10) console.log("Z-matrix sample:", zMatrix.slice(0,5).map(row => row.slice(0,5)));
-
-
                 cache[chromData.name] = {
-                    // For heatmap, x and y are usually the coordinates for the grid lines / cell centers
-                    // Plotly's z is expected to be a 2D array where z[i][j] is value at y=y[i] and x=x[j]
-                    x: xyIndices.map(val => (val * GRID_SPACING_JS) / 1000), // Convert index to kb position
-                    y: xyIndices.map(val => (val * GRID_SPACING_JS) / 1000), // Convert index to kb position
-                    z: zMatrix,
-                    type: 'heatmap',
-                    name: chromData.name,
+                    x: xyIndices.map(val => (val * GRID_SPACING_JS) / 1000), 
+                    y: xyIndices.map(val => (val * GRID_SPACING_JS) / 1000), 
+                    z: zMatrix, type: 'heatmap', name: chromData.name,
                     hoverongaps: false, 
-                    // xgap: 0.5, ygap: 0.5, // Smaller gaps
                     colorbar: { title: 'Distance', titleside: 'right', tickfont: {size: 10} }
                 };
             });
-            logStatus("Data transformed and cached for plotting.");
-            // console.log("Transformed Plot Cache:", cache);
-            return cache;
+            logStatus("Data transformed for plotting."); return cache;
         }
         
         function updatePlot() {
-            if (!transformedPlotDataCache) {
-                plotContainer.innerHTML = "No data available. Process a FASTA file and select 'Visualize'."; return;
-            }
+            if (plotArea.classList.contains('hidden')) return; 
+            if (!transformedPlotDataCache) { plotContainer.innerHTML = "No data. Process FASTA & 'Visualize'."; return; }
             const selectedChromName = chromosomeSelect.value;
-            if (!selectedChromName || !transformedPlotDataCache[selectedChromName]) {
-                plotContainer.innerHTML = `Plot data not found for chromosome: ${selectedChromName}.`; return;
-            }
-
-            const plotTrace = transformedPlotDataCache[selectedChromName];
-            // console.log("Plotting trace for " + selectedChromName + ":", JSON.stringify(plotTrace.x), JSON.stringify(plotTrace.y), plotTrace.z.length > 0 ? plotTrace.z[0].length : 0);
-            // console.log("Sample Z data for plot:", plotTrace.z.slice(0, Math.min(5, plotTrace.z.length)).map(row => row.slice(0, Math.min(5, row.length))));
-
-
-            if (!plotTrace.x || plotTrace.x.length === 0 || !plotTrace.y || plotTrace.y.length === 0 || !plotTrace.z || plotTrace.z.length === 0) {
-                plotContainer.innerHTML = `Data for chromosome ${selectedChromName} is empty or malformed. Cannot plot.`;
-                logStatus(`Error: Plot data for ${selectedChromName} is empty or malformed.`);
-                return;
-            }
-
-
-            const data = [{ ...plotTrace }]; 
-            data[0].colorscale = colorscaleSelect.value; 
-            data[0].showscale = showColorbarCheckbox.checked;
-            data[0].reversescale = reverseColorscaleCheckbox.checked;
+            if (!selectedChromName || !transformedPlotDataCache[selectedChromName]) { plotContainer.innerHTML = `Plot data not found for ${selectedChromName}.`; return; }
             
-            const zminUser = parseFloat(zminInput.value);
-            const zmaxUser = parseFloat(zmaxInput.value);
+            let plotTrace = JSON.parse(JSON.stringify(transformedPlotDataCache[selectedChromName])); // Deep copy for modification
 
-            // Calculate dynamic tick values if not too many ticks
-            const makeDt_Tick = (axisLength) => {
-                if (axisLength <= 0) return 1; // Should not happen
-                if (axisLength <= 20) return (GRID_SPACING_JS / 1000); // Tick every kb if few points
-                return Math.max(1, Math.round(axisLength / 10)) * (GRID_SPACING_JS / 1000) ; // Aim for ~10 ticks in kb
+            if (!plotTrace.x || plotTrace.x.length === 0) { plotContainer.innerHTML = `Data for ${selectedChromName} is empty.`; return; }
+
+            // Apply plot options
+            plotTrace.colorscale = colorscaleSelect.value; 
+            plotTrace.showscale = showColorbarCheckbox.checked; 
+            plotTrace.reversescale = reverseColorscaleCheckbox.checked; 
+            plotTrace.xgap = parseFloat(cellGapRange.value);
+            plotTrace.ygap = parseFloat(cellGapRange.value);
+
+            if (showTextOnCellsCheckbox.checked) {
+                // Prepare text array for Plotly (same dimensions as z)
+                plotTrace.text = plotTrace.z.map(row => row.map(val => (isNaN(val) || val === null) ? '' : val.toString()));
+                plotTrace.textfont = { size: 8, color: 'grey' }; // Adjust as needed
+                plotTrace.hoverinfo = 'x+y+z'; // Show x, y, z on hover if text is shown
+            } else {
+                delete plotTrace.text; // Remove text if not showing
+                plotTrace.hoverinfo = 'x+y+z';
+            }
+
+            if (transposeMatrixCheckbox.checked) {
+                // Swap x and y data, and transpose z
+                let tempX = plotTrace.x;
+                plotTrace.x = plotTrace.y;
+                plotTrace.y = tempX;
+                plotTrace.z = plotTrace.z[0].map((_, colIndex) => plotTrace.z.map(row => row[colIndex]));
+                if (plotTrace.text) { // Transpose text array as well
+                     plotTrace.text = plotTrace.text[0].map((_, colIndex) => plotTrace.text.map(row => row[colIndex]));
+                }
+            }
+            
+            const data = [plotTrace]; 
+            const zminUser = parseFloat(zminInput.value); const zmaxUser = parseFloat(zmaxInput.value);
+            const makeDt_Tick = (axisData) => {
+                if (!axisData || axisData.length === 0) return 100;
+                const maxVal = axisData[axisData.length -1]; // Assumes sorted
+                if (maxVal <= 0) return 100; 
+                if (maxVal <= 2000) return Math.max(50, Math.round(maxVal / 20) /100)*100; // Finer ticks for smaller ranges
+                return Math.max(100, Math.round(maxVal / 10000) * 1000) ; 
             };
             
             const layout = {
                 title: `Levenshtein Distance Matrix: ${selectedChromName}`,
                 xaxis: { 
-                    title: `Position (kb)`, 
-                    // type: 'linear', // Ensure Plotly treats x as numerical
-                    dtick: makeDt_Tick(plotTrace.x.length),
-                    // range: [plotTrace.x[0] - (GRID_SPACING_JS/2000), plotTrace.x[plotTrace.x.length - 1] + (GRID_SPACING_JS/2000)] // Ensure edges are visible
+                    title: `Position (kb)${transposeMatrixCheckbox.checked ? ' (Original Y)' : ''}`, 
+                    dtick: makeDt_Tick(plotTrace.x), 
+                    automargin: true,
+                    // Ensure x-axis starts near 0 if data doesn't include it.
+                    // range: plotTrace.x.length > 0 ? [Math.min(0, plotTrace.x[0]), plotTrace.x[plotTrace.x.length - 1]] : undefined
                 },
                 yaxis: { 
-                    title: `Position (kb)`, 
-                    // type: 'linear',
+                    title: `Position (kb)${transposeMatrixCheckbox.checked ? ' (Original X)' : ''}`, 
                     autorange: 'reversed', 
-                    dtick: makeDt_Tick(plotTrace.y.length),
-                    // range: [plotTrace.y[plotTrace.y.length - 1] + (GRID_SPACING_JS/2000), plotTrace.y[0] - (GRID_SPACING_JS/2000)], // Reversed range
-                    scaleanchor: "x", 
-                    scaleratio: 1,
+                    dtick: makeDt_Tick(plotTrace.y), 
+                    scaleanchor: fixedAspectRatioCheckbox.checked ? "x" : undefined, 
+                    scaleratio: fixedAspectRatioCheckbox.checked ? 1 : undefined,
+                    automargin: true,
+                    // range: plotTrace.y.length > 0 ? [plotTrace.y[plotTrace.y.length - 1], Math.max(0, plotTrace.y[0])] : undefined // Reversed
                 },
-                margin: { l: 80, r: 50, b: 100, t: 80, pad: 4 }, 
-                autosize: true, 
-                zmin: isNaN(zminUser) ? undefined : zminUser, 
-                zmax: isNaN(zmaxUser) ? undefined : zmaxUser,
+                margin: { l: 70, r: 40, b: 70, t: 70, pad: 5 }, autosize: true, 
+                zmin: isNaN(zminUser) ? undefined : zminUser, zmax: isNaN(zmaxUser) ? undefined : zmaxUser,
             };
             
             Plotly.react(plotContainer, data, layout, {responsive: true});
             logStatus(`Plot updated for chromosome ${selectedChromName}.`);
         }
 
-        function populateChromosomeSelect() {
+        function populateChromosomeSelect() { /* ... same ... */
             chromosomeSelect.innerHTML = ""; 
             if (transformedPlotDataCache && Object.keys(transformedPlotDataCache).length > 0) {
                 Object.keys(transformedPlotDataCache).sort().forEach(chromName => {
@@ -521,98 +396,103 @@
             }
         }
         
-        async function handleProcessing(isForVisualization) { /* ... same as before ... */
-            if (!wasmInitialized) { await initializeWasm(); if (!wasmInitialized) return; }
-            if (!fastaFileInput.files || fastaFileInput.files.length === 0) { logStatus("Please select a FASTA file."); return; }
-
-            const file = fastaFileInput.files[0];
-            const isGzipped = file.name.endsWith('.gz');
-
-            statusDiv.innerHTML = ""; 
-            logStatus(`Reading file: ${file.name} (gzipped: ${isGzipped})`);
-            spinnerContainer.classList.remove('hidden');
-            visualizeButton.disabled = true; downloadIpcButton.disabled = true;
-            
-            if (isForVisualization) {
-                plotArea.classList.remove('hidden'); 
-                plotContainer.innerHTML = "Processing for visualization, please wait...";
-                transformedPlotDataCache = null; 
-            } else {
-                plotArea.classList.add('hidden'); 
-            }
-
-            try {
-                const arrayBuffer = await file.arrayBuffer();
-                const fileBytes = new Uint8Array(arrayBuffer);
-                logStatus("File read successfully. Starting Wasm processing...");
-
-                if (isForVisualization) {
-                    const jsonStringResult = process_fasta_to_plot_json(fileBytes, isGzipped, rustProgressCallback);
-                    logStatus("Wasm (JSON) processing finished. Transforming data for plot...");
-                    if (!jsonStringResult || jsonStringResult.length === 0) {
-                        throw new Error("Wasm returned empty JSON string.");
+        // Main Processing Function
+        async function handleProcessingRequest(isForVisualization) { /* ... same ... */
+            if (!wasmInitialized) { const initSuccess = await initializeWasm(); if (!initSuccess) return; }
+            if (!currentFastaBytes) { logStatus("No FASTA data staged. Please load data first."); return; }
+            statusDiv.innerHTML = ""; logStatus(`Starting processing for ${isForVisualization ? 'visualization' : 'IPC download'}...`);
+            spinnerContainer.classList.remove('hidden'); setUIDisabledState(true); 
+            if (isForVisualization) { plotArea.classList.remove('hidden'); plotContainer.innerHTML = "Processing..."; transformedPlotDataCache = null; } 
+            else { plotArea.classList.add('hidden'); }
+            setTimeout(async () => {
+                try {
+                    if (isForVisualization) {
+                        const jsonStringResult = process_fasta_to_plot_json(currentFastaBytes, currentIsGzipped, rustProgressCallback);
+                        logStatus("Wasm (JSON) finished. Transforming data...");
+                        if (!jsonStringResult) throw new Error("Wasm returned null/empty JSON.");
+                        const jsonDataArray = JSON.parse(jsonStringResult);
+                        transformedPlotDataCache = transformJsonToHeatmapCache(jsonDataArray);
+                        if (transformedPlotDataCache && Object.keys(transformedPlotDataCache).length > 0 && populateChromosomeSelect()) { updatePlot(); } 
+                        else { plotContainer.innerHTML = "No plottable data, or error in JSON transformation."; }
+                    } else { 
+                        const ipcOutputFileName = ipcFileNameInput.value.trim() || "distances.ipc";
+                        logStatus(`Wasm (IPC) for ${ipcOutputFileName}...`);
+                        const ipcBytesResult = process_fasta_to_ipc_bytes(currentFastaBytes, currentIsGzipped, rustProgressCallback);
+                        logStatus("Wasm (IPC) finished."); const blob = new Blob([ipcBytesResult], { type: 'application/octet-stream' });
+                        const downloadUrl = URL.createObjectURL(blob); const a = document.createElement('a');
+                        a.href = downloadUrl; a.download = ipcOutputFileName; document.body.appendChild(a);
+                        a.click(); document.body.removeChild(a); URL.revokeObjectURL(downloadUrl);
+                        logStatus(`IPC data download as '${ipcOutputFileName}' initiated.`);
                     }
-                    const jsonDataArray = JSON.parse(jsonStringResult);
-                    transformedPlotDataCache = transformJsonToHeatmapCache(jsonDataArray);
-
-                    if (transformedPlotDataCache && Object.keys(transformedPlotDataCache).length > 0 && populateChromosomeSelect()) {
-                        updatePlot(); 
-                    } else {
-                        plotContainer.innerHTML = "No plottable data found, or error during JSON transformation.";
-                        if (!transformedPlotDataCache) logStatus("Error: Failed to transform JSON to heatmap cache.");
-                        else if (Object.keys(transformedPlotDataCache).length === 0) logStatus("Warning: Plot cache is empty after transformation.");
-                    }
-                } else { 
-                    const ipcOutputFileName = ipcFileNameInput.value.trim() || "distances.ipc";
-                    logStatus(`Wasm (IPC) processing started for ${ipcOutputFileName}...`);
-                    const ipcBytesResult = process_fasta_to_ipc_bytes(fileBytes, isGzipped, rustProgressCallback);
-                    logStatus("Wasm (IPC) processing finished.");
-                    const blob = new Blob([ipcBytesResult], { type: 'application/octet-stream' });
-                    const downloadUrl = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = downloadUrl;
-                    a.download = ipcOutputFileName;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(downloadUrl);
-                    logStatus(`Full Arrow IPC data (${(ipcBytesResult.length / 1024 / 1024).toFixed(2)} MB) download as '${ipcOutputFileName}' initiated.`);
-                }
-
-            } catch (error) { 
-                let errorMsg = `Error during processing: ${error}`;
-                if (error && error.message) { errorMsg += ` | Details: ${error.message}`; }
-                else if (typeof error === 'string') { errorMsg = `Error: ${error}`; }
-                logStatus(errorMsg); console.error("Processing error object:", error);
-                if (isForVisualization) plotContainer.innerHTML = "An error occurred. Check log.";
-            } finally {
-                spinnerContainer.classList.add('hidden');
-                visualizeButton.disabled = false; downloadIpcButton.disabled = false;
-            }
+                } catch (error) { 
+                    let errorMsg = `Error: ${error}`; if (error && error.message) { errorMsg += ` | Details: ${error.message}`; }
+                    logStatus(errorMsg); console.error("Processing error:", error);
+                    if (isForVisualization) plotContainer.innerHTML = "An error occurred.";
+                } finally { spinnerContainer.classList.add('hidden'); setUIDisabledState(false); }
+            }, 50);
         }
 
-        visualizeButton.addEventListener('click', () => handleProcessing(true));
-        downloadIpcButton.addEventListener('click', () => handleProcessing(false));
-        
-        chromosomeSelect.addEventListener('change', updatePlot);
-        colorscaleSelect.addEventListener('change', updatePlot);
-        showColorbarCheckbox.addEventListener('change', updatePlot);
-        reverseColorscaleCheckbox.addEventListener('change', updatePlot);
-        zminInput.addEventListener('input', updatePlot); 
-        zmaxInput.addEventListener('input', updatePlot);
+        // Event Listeners Setup
+        function setupEventListeners() {
+            fastaFileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0]; if (file) stageFastaFromFile(file);
+            });
+            fetchUrlButton.addEventListener('click', stageFastaFromUrl);
+            pasteButton.addEventListener('click', stageFastaFromText);  
+            loadExampleButton.addEventListener('click', stageAndProcessExample); // This one auto-processes
+            
+            visualizeButton.addEventListener('click', () => handleProcessingRequest(true));
+            downloadIpcButton.addEventListener('click', () => handleProcessingRequest(false));
+            
+            chromosomeSelect.addEventListener('change', updatePlot);
+            colorscaleSelect.addEventListener('change', updatePlot);
+            showColorbarCheckbox.addEventListener('change', updatePlot);
+            reverseColorscaleCheckbox.addEventListener('change', updatePlot);
+            zminInput.addEventListener('input', updatePlot); 
+            zmaxInput.addEventListener('input', updatePlot);
+            transposeMatrixCheckbox.addEventListener('change', updatePlot);
+            cellGapRange.addEventListener('input', () => { // Update span and plot
+                if (cellGapValueSpan) cellGapValueSpan.textContent = cellGapRange.value;
+                updatePlot();
+            });
+            showTextOnCellsCheckbox.addEventListener('change', updatePlot);
+            fixedAspectRatioCheckbox.addEventListener('change', updatePlot);
 
-        initializeWasm();
-        populateChromosomeSelect(); 
-        
-        let resizeTimeout;
-        window.addEventListener('resize', () => { 
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => {
-                if (transformedPlotDataCache && chromosomeSelect.value && transformedPlotDataCache[chromosomeSelect.value] && !plotArea.classList.contains('hidden')) {
-                    updatePlot(); 
-                }
-            }, 250); 
+
+            const tabs = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    const targetTab = tab.getAttribute('data-tab');
+                    tabContents.forEach(tc => { tc.classList.toggle('active', tc.id === targetTab); });
+                    currentFastaBytes = null; updateActionButtonsState(); 
+                    logStatus("Input method changed. Please provide new data for the active tab.");
+                });
+            });
+
+            let resizeTimeout;
+            window.addEventListener('resize', () => { 
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    if (transformedPlotDataCache && chromosomeSelect.value && transformedPlotDataCache[chromosomeSelect.value] && !plotArea.classList.contains('hidden')) {
+                        updatePlot(); 
+                    }
+                }, 250); 
+            });
+        }
+
+        // Page Load
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeDOMReferences(); 
+            setupEventListeners();     
+            initializeWasm();          
+            updateActionButtonsState(); 
+            populateChromosomeSelect(); 
+            if(cellGapRange && cellGapValueSpan) cellGapValueSpan.textContent = cellGapRange.value; // Init cell gap display
         });
+
     </script>
 </body>
 </html>
