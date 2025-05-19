@@ -1,0 +1,15 @@
+{
+  "name": "chromosome_distance_calculator",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "chromosome_distance_calculator_bg.wasm",
+    "chromosome_distance_calculator.js",
+    "chromosome_distance_calculator.d.ts"
+  ],
+  "main": "chromosome_distance_calculator.js",
+  "types": "chromosome_distance_calculator.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

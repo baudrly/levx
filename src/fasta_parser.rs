@@ -1,63 +1,80 @@
 use flate2::read::GzDecoder;
 use std::fs::File;
-// Removed unused std::io::Read
-use std::io::{BufRead, BufReader, Error, ErrorKind}; 
+use std::io::{BufRead, BufReader, Error, Cursor}; // Removed ErrorKind
 
 const APPROX_CHROMOSOME_CAPACITY: usize = 100 * 1024 * 1024;
 
-pub fn load_chromosomes(path: &str) -> Result<Vec<(String, Vec<u8>)>, Error> {
+pub fn load_chromosomes_from_bytes<'a>(
+    fasta_data: &'a [u8],
+    is_gzipped: bool,
+) -> Result<Vec<(String, Vec<u8>)>, Error> {
+    let cursor = Cursor::new(fasta_data);
+    let reader: Box<dyn BufRead + 'a> = if is_gzipped {
+        Box::new(BufReader::new(GzDecoder::new(cursor)))
+    } else {
+        Box::new(BufReader::new(cursor))
+    };
+    parse_fasta_from_bufread(reader)
+}
+
+#[allow(dead_code)]
+pub fn load_chromosomes_from_path(path: &str) -> Result<Vec<(String, Vec<u8>)>, Error> {
     let file = File::open(path)
         .map_err(|e| Error::new(e.kind(), format!("Failed to open FASTA file '{}': {}", path, e)))?;
     
     let reader: Box<dyn BufRead> = if path.ends_with(".gz") {
-        println!("Detected .gz extension for '{}', reading as gzipped FASTA.", path);
         Box::new(BufReader::new(GzDecoder::new(file)))
     } else {
         Box::new(BufReader::new(file))
     };
+    parse_fasta_from_bufread(reader)
+}
 
+fn parse_fasta_from_bufread<'a>(
+    mut reader: Box<dyn BufRead + 'a>
+) -> Result<Vec<(String, Vec<u8>)>, Error> {
     let mut chromosomes = Vec::new();
-    let mut current_sequence = Vec::new();
+    let mut current_sequence = Vec::with_capacity(APPROX_CHROMOSOME_CAPACITY);
     let mut current_header_name: Option<String> = None;
+    let mut line_buffer = String::new();
 
-    for line_result in reader.lines() {
-        let line = line_result.map_err(|e| Error::new(e.kind(), format!("Error reading line from FASTA file '{}': {}", path, e)))?;
-        
-        if line.starts_with('>') {
-            if let Some(header_name) = current_header_name.take() {
-                if !current_sequence.is_empty() {
-                    chromosomes.push((header_name, std::mem::take(&mut current_sequence)));
-                } else {
-                    eprintln!("Warning: Chromosome/sequence entry '{}' in file '{}' had no sequence data. Skipping.", header_name, path);
+    loop {
+        line_buffer.clear();
+        match reader.read_line(&mut line_buffer) {
+            Ok(0) => break, // EOF
+            Ok(_) => {
+                let line_trimmed = line_buffer.trim_end_matches(|c| c == '\r' || c == '\n');
+                if line_trimmed.starts_with('>') {
+                    if let Some(header_name) = current_header_name.take() {
+                        if !current_sequence.is_empty() {
+                            chromosomes.push((header_name, std::mem::replace(&mut current_sequence, Vec::with_capacity(APPROX_CHROMOSOME_CAPACITY))));
+                        }
+                    }
+                    let header_content = line_trimmed[1..].trim();
+                    let new_chrom_name = header_content.split_whitespace().next().unwrap_or("").trim();
+                    if new_chrom_name.is_empty() {
+                        current_header_name = Some(format!("UnnamedSequence{}", chromosomes.len() + 1));
+                    } else {
+                        current_header_name = Some(new_chrom_name.to_string());
+                    }
+                } else if current_header_name.is_some() {
+                    for char_byte in line_trimmed.bytes() {
+                        let upper_char = char_byte.to_ascii_uppercase();
+                        match upper_char {
+                            b'A' | b'C' | b'G' | b'T' | b'N' => current_sequence.push(upper_char),
+                            _ => { /* Ignore */ }
+                        }
+                    }
                 }
             }
-            let header_content = line[1..].trim();
-            let new_chrom_name = header_content.split_whitespace().next().unwrap_or(header_content);
-            if new_chrom_name.is_empty() {
-                 return Err(Error::new(ErrorKind::InvalidData, format!("Encountered an empty chromosome name after '>' in file '{}'. Line: '{}'", path, line)));
-            }
-            current_header_name = Some(new_chrom_name.to_string());
-            current_sequence = Vec::with_capacity(APPROX_CHROMOSOME_CAPACITY);
-        } else if current_header_name.is_some() {
-            for char_byte in line.trim().bytes() {
-                let upper_char = char_byte.to_ascii_uppercase();
-                match upper_char {
-                    b'A' | b'C' | b'G' | b'T' | b'N' => current_sequence.push(upper_char),
-                    _ => { /* Ignore other characters */ }
-                }
-            }
+            Err(e) => return Err(Error::new(e.kind(), format!("Error reading line from FASTA data: {}", e))),
         }
     }
+
     if let Some(header_name) = current_header_name.take() {
         if !current_sequence.is_empty() {
             chromosomes.push((header_name, current_sequence));
-        } else {
-            eprintln!("Warning: Last chromosome/sequence entry '{}' in file '{}' had no sequence data. Skipping.", header_name, path);
         }
-    }
-
-    if chromosomes.is_empty() && (path.ends_with(".fa") || path.ends_with(".fasta") || path.ends_with(".fa.gz") || path.ends_with(".fasta.gz")) {
-         println!("Warning: No valid chromosome sequences found in '{}'. Output will be empty if this was the only input.", path);
     }
     Ok(chromosomes)
 }
