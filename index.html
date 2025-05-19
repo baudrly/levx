@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wasm Chromosome Distance Matrix</title>
+    <title>Levenshtein distance matrix calculator and viewer</title>
     <script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
     <style>
         /* ... (Same "slick" CSS from your previous working example) ... */
@@ -285,14 +285,6 @@
             <input type="text" id="ipcFileName" value="distances.ipc">
         </section>
 
-        <section class="status-section">
-            <h2>Processing Log</h2>
-            <div id="spinnerContainer" class="spinner-container hidden">
-                 <div class="spinner"></div>
-            </div>
-            <div id="status">Select a FASTA file and an action...</div>
-        </section>
-
         <section class="plot-section hidden" id="plotArea">
             <h2>Distance Matrix Visualization</h2>
             <label for="chromosomeSelect">Select Chromosome to Visualize:</label>
@@ -328,10 +320,18 @@
             </div>
             <div id="plotContainer">Plot will appear here after processing. Select a chromosome.</div>
         </section>
+
+        <section class="status-section">
+            <h2>Processing Log</h2>
+            <div id="spinnerContainer" class="spinner-container hidden">
+                 <div class="spinner"></div>
+            </div>
+            <div id="status">Select a FASTA file and an action...</div>
+        </section>
     </main>
     
     <footer class="container-fluid">
-        <p>© 2024 Wasm Levenshtein Distance Calculator</p>
+
     </footer>
 
     <script type="module">
